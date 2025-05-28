@@ -5,6 +5,30 @@ import yfinance as yf
 plt.style.use('seaborn')
 
 class MeanReversionBacktest(object):
+    '''
+    Class for vectorized backtesting of Momentum trading strategy.
+
+    Inputs ---
+        ticker: ticker of the stock used
+        start: start date for stock data, 
+            format = 'yyyy-mm-dd'
+        end: end date for stock data
+            format = 'yyyy-mm-dd'
+        length_sma: the length of the SMA used in the trading strategy to compute the stationary 
+            time series, that will be equal to: price - SMA
+        threshold: the threshold used to compute the signals of the trading strategy
+
+    functions ---
+        get_data: get the data from yahoo finance and prepare the dataset with all the needed features
+        
+        plot_asset: plot the data of the asset and the two SMA
+        
+        strategy: run the backtest of the trading strategy, 
+            return the returns, the strategy returns, the max drawdown and the longest drawdown period
+        
+        plot_resuts: plot the cumulative returns of the buy-and-hold, the cumulative returns of the strategy, 
+            and the max cumulative returns of the strategy
+    '''
     def __init__(self,
                  ticker: str,
                  start: str,
