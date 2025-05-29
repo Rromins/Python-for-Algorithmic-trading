@@ -20,6 +20,9 @@ class BacktestBase(object):
         self.amount = amount
         self.ftc = ftc
         self.ptc = ptc
+        self.units = 0
+        self.position = 0
+        self.trades = 0
         self.verbose = verbose
         self.get_data()
 
@@ -65,3 +68,50 @@ class BacktestBase(object):
         date, price = self.get_date_price(bar)
         net_wealth = self.units*price + self.amount
         print(f"{date}, current net wealth: {net_wealth:.2f}")
+
+    def place_buy_order(self, bar, units=None, amount=None):
+        '''
+        Place a buy order
+        '''
+        date, price = self.get_date_price(bar)
+        if units is None:
+            units = int(amount / price)
+        self.amount -= (units*price) * (1+self.ptc) + self.ftc
+        self.units += units
+        self.trades += 1
+        if self.verbose:
+            print(f"{date}, buying {units} units at {price:.2f}")
+            self.print_balance(bar)
+            self.print_net_wealth(bar)
+        
+    def place_sell_order(self, bar, units=None, amount=None):
+        '''
+        Place a sell order
+        '''
+        date, price = self.get_date_price(bar)
+        if units is None:
+            units = int(amount / price)
+        self.amount += (units*price) * (1-self.ptc) - self.ftc
+        self.units -= units
+        self.trades += 1
+        if self.verbose:
+            print(f"{date}, selling {units} units at {price:.2f}")
+            self.print_balance(bar)
+            self.print_net_wealth(bar)
+
+    def close_out(self, bar):
+        '''
+        Closing out a long or short position
+        '''
+        date, price = self.get_date_price(bar)
+        self.amount += self.units * price
+        self.units = 0
+        self.trades += 1
+        if self.verbose:
+            print(f"{date}, inventory {self.units} units at {price:.2f}")
+            print("-"*55)
+            print(f"Final balance  [$] {self.amount:.2f}")
+            perf = ((self.amount - self.initial_amount) / self.initial_amount*100)
+            print(f"Net performance  [%] {perf:.2f}")
+            print(f"Trades Executed  [#] {self.trades:.2f}")
+            print("-"*55)
