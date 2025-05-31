@@ -6,10 +6,10 @@ plt.style.use('seaborn')
 
 class BacktestBase(object):
     def __init__(self, 
-                 ticker,
-                 start,
-                 end,
-                 amount,
+                 ticker: str, 
+                 start: str, 
+                 end: str, 
+                 amount: float,
                  ftc=0.0,
                  ptc=0.0,
                  verbose=True):
@@ -75,7 +75,7 @@ class BacktestBase(object):
         '''
         date, price = self.get_date_price(bar)
         if units is None:
-            units = int(amount / price)
+            units = float(amount / price)
         self.amount -= (units*price) * (1+self.ptc) + self.ftc
         self.units += units
         self.trades += 1
@@ -90,7 +90,7 @@ class BacktestBase(object):
         '''
         date, price = self.get_date_price(bar)
         if units is None:
-            units = int(amount / price)
+            units = float(amount / price)
         self.amount += (units*price) * (1-self.ptc) - self.ftc
         self.units -= units
         self.trades += 1
