@@ -85,10 +85,12 @@ class LongOnlyBacktest(BacktestBase):
                 if self.data['norm_diff'].iloc[candle] < -threshold:
                     self._place_buy_order(candle, amount=self.amount)
                     self.position = 1
+
             elif self.position == 1:
                 if self.data['norm_diff'].iloc[candle] >= 0.0:
                     self._place_sell_order(candle, units=self.units)
                     self.position = 0
+
         self._close_out(candle)
 
 if __name__ == '__main__':
