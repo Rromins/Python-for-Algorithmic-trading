@@ -68,27 +68,27 @@ class BacktestBase():
         self._get_data()
 
     def _get_data(self):
-        '''
+        """
         Retrieve historical price data from Yahoo Finance.
 
         The method renames standard OHLCV columns and computes log returns.
-        '''
+        """
         df = yf.download(tickers=self.ticker, start=self.start, end=self.end)
         df.columns = ['close', 'high', 'low', 'open', 'volume']
         df['log_returns'] = np.log(df['close'] / df['close'].shift(1))
         self.data = df
 
     def plot_data(self):
-        '''
+        """
         Plot the asset's close price over time.
-        '''
+        """
         plt.plot(self.data['close'], color='gray', label='close price')
         plt.legend()
         plt.title(f"{self.ticker} close price")
         plt.plot()
 
     def _get_date_price(self, candle):
-        '''
+        """
         Get the date and closing price for a given candle index.
 
         Parameters
@@ -100,38 +100,38 @@ class BacktestBase():
         -------
         tuple
             (date as str, close price as float)
-        '''
+        """
         date = str(self.data.index[candle])
         price = self.data['close'].iloc[candle]
         return date, price
 
     def _print_balance(self, candle):
-        '''
+        """
         Print the current cash balance at a given candle.
 
         Parameters
         ----------
         candle : int
             Index of the bar/candle in the price DataFrame.
-        '''
+        """
         date, price = self._get_date_price(candle)
         print(f"{date}, current balance: {self.amount:.2f}, at current price: {price}")
 
     def _print_net_wealth(self, candle):
-        '''
+        """
         Print the current net wealth (cash + asset holdings).
 
         Parameters
         ----------
         candle : int
             Index of the bar/candle in the price DataFrame.
-        '''
+        """
         date, price = self._get_date_price(candle)
         net_wealth = self.units*price + self.amount
         print(f"{date}, current net wealth: {net_wealth:.2f}")
 
     def _place_buy_order(self, candle, units=None, amount=None):
-        '''
+        """
         Execute a buy order for a given number of units or monetary amount.
 
         Parameters
@@ -142,7 +142,7 @@ class BacktestBase():
             Number of units to buy. If None, 'amount' must be provided.
         amount : float, optional
             Monetary amount to invest. Used to compute units if `units` is None.
-        '''
+        """
         date, price = self._get_date_price(candle)
         if units is None:
             units = float(amount / price)
@@ -155,7 +155,7 @@ class BacktestBase():
             self._print_net_wealth(candle)
 
     def _place_sell_order(self, candle, units=None, amount=None):
-        '''
+        """
         Execute a sell order for a given number of units or monetary amount.
 
         Parameters
@@ -166,7 +166,7 @@ class BacktestBase():
             Number of units to sell. If None, 'amount' must be provided.
         amount : float, optional
             Monetary amount to liquidate. Used to compute units if `units` is None.
-        '''
+        """
         date, price = self._get_date_price(candle)
         if units is None:
             units = float(amount / price)
@@ -179,14 +179,14 @@ class BacktestBase():
             self._print_net_wealth(candle)
 
     def _close_out(self, candle):
-        '''
+        """
         Close all open positions at a given candle.
 
         Parameters
         ----------
         candle : int
             Index of the bar/candle in the price DataFrame.
-        '''
+        """
         date, price = self._get_date_price(candle)
         self.amount += self.units * price
         self.units = 0

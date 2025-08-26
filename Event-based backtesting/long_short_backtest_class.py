@@ -1,5 +1,5 @@
 """
-Long short backtest
+Backtesting framework for long/short trading strategies.
 """
 
 from backtest_base import BacktestBase
@@ -101,7 +101,7 @@ class LongShortBacktest(BacktestBase):
             self._place_sell_order(candle, amount=amount)
 
     def run_mean_reversion_strategy(self, sma, threshold):
-        '''
+        """
         Run a mean reversion backtest with long and short positions.
 
         The trading signal is based on the deviation of the close price
@@ -122,7 +122,7 @@ class LongShortBacktest(BacktestBase):
             Threshold value for the normalized difference to trigger
             trading signals. Higher values make the strategy more
             conservative.
-        '''
+        """
         msg  = "\n\nRunning mean reversion strategy | "
         msg += f"Length SMA={sma} & thr={threshold}"
         msg += f"\nfixed costs {self.ftc} | "

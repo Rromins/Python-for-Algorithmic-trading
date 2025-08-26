@@ -1,5 +1,5 @@
 """
-Vectorized backtesting of a Momentum trading strategy.
+Vectorized backtesting of a Simple Moving Average (SMA) trading strategy.
 """
 
 import numpy as np
@@ -7,13 +7,13 @@ import matplotlib.pyplot as plt
 import yfinance as yf
 plt.style.use('seaborn')
 
-class MomentumBacktest():
+class SMAbacktest():
     """
-    Vectorized backtesting of a Momentum trading strategy.
+    Vectorized backtesting of a Simple Moving Average (SMA) trading strategy.
 
     This class downloads historical price data for a given asset,
-    computes rolling momentum signals based on past returns, and 
-    evaluates a long/short momentum trading strategy.
+    computes technical indicators (SMA1, SMA2), and evaluates
+    a crossover-based SMA trading strategy.
 
     Parameters
     ----------
@@ -23,60 +23,70 @@ class MomentumBacktest():
         Start date for historical data (format: 'YYYY-MM-DD').
     end : str
         End date for historical data (format: 'YYYY-MM-DD').
-    lookback : int
-        Number of past returns to average for computing 
-        momentum signals.
+    sma1 : int
+        Window length for the short-term Simple Moving Average.
+    sma2 : int
+        Window length for the long-term Simple Moving Average.
 
     Attributes
     ----------
     data : pandas.DataFrame
         Price data and calculated indicators.
     results : pandas.DataFrame or None
-        Results of the backtest after running `run_strategy`.
+        Results of the backtest after running `strategy`.
     """
     def __init__(self,
                  ticker: str,
                  start: str,
                  end: str,
-                 lookback: int):
+                 sma1: int,
+                 sma2: int):
         self.ticker = ticker
         self.start = start
         self.end = end
-        self.lookback = lookback
+        self.sma1 = sma1
+        self.sma2 = sma2
         self._get_data()
         self.results = None
 
     def _get_data(self):
         """
-        Download price data and compute log returns.
+        Download price data and compute SMA indicators.
 
         Data is fetched from Yahoo Finance and enhanced with:
         - Log returns
+        - Short-term SMA (`SMA1`)
+        - Long-term SMA (`SMA2`)
         """
         df = yf.download(tickers=self.ticker, start=self.start, end=self.end)
-        df.columns = ['close', 'high', 'low', 'open', 'volume']
+        df.columns = ['close', 'high', 'low', 'open', 'volumne']
         df['log_returns'] = np.log(df['close'] / df['close'].shift(1))
+        df['SMA1'] = df['close'].rolling(self.sma1).mean()
+        df['SMA2'] = df['close'].rolling(self.sma2).mean()
         self.data = df
 
     def plot_asset(self):
         """
-        Plot asset price over time.
+        Plot asset price with SMA indicators.
 
-        Displays the historical closing price of the asset.
+        Plots the asset’s closing price alongside the short-term and
+        long-term moving averages.
         """
         df = self.data.copy()
         plt.plot(df['close'], c='gray', label='Asset price')
+        plt.plot(df['SMA1'], label='SMA1')
+        plt.plot(df['SMA2'], c='blue', label='SMA2')
         plt.legend()
         plt.title(self.ticker)
         plt.plot()
 
     def run_strategy(self):
         """
-        Run the momentum trading strategy.
+        Run the SMA crossover trading strategy.
 
-        A long position is taken when the rolling average of past returns
-        (over `lookback` days) is positive, and a short position when it is negative. 
-        The strategy is evaluated against a buy-and-hold benchmark.
+        A long position is taken when `SMA1 > SMA2`, and a short
+        position otherwise. The strategy is evaluated against a
+        buy-and-hold benchmark.
 
         Returns
         -------
@@ -84,20 +94,20 @@ class MomentumBacktest():
             returns : float
                 Total buy-and-hold return.
             strategy_returns : float
-                Total momentum strategy return.
+                Total strategy return.
             max_drawdown : float
                 Maximum drawdown of the strategy.
             max_drawdown_period : datetime.timedelta
                 Longest continuous drawdown period.
         """
         df = self.data.copy()
-        df['position'] = np.sign(df['log_returns'].rolling(self.lookback).mean())
-        df['strategy'] = df['position'].shift(1)*df['log_returns']
+        df['position'] = np.where(df['SMA1'] > df['SMA2'], 1, -1)
+        df['strategy_logret'] = df['position'].shift(1)*df['log_returns']
         df['sum_returns'] = df['log_returns'].cumsum().apply(np.exp)
-        df['sum_strategy'] = df['strategy'].cumsum().apply(np.exp)
+        df['sum_strategy'] = df['strategy_logret'].cumsum().apply(np.exp)
 
         # returns from buy-and-hold and returns from the strategy
-        returns, strategy_returns = df[['log_returns', 'strategy']].sum().apply(np.exp)
+        returns, strategy_returns = df[['log_returns', 'strategy_logret']].sum().apply(np.exp)
         print(f"Returns: {returns}")
         print(f"Strategy returns: {strategy_returns}")
 
@@ -118,8 +128,8 @@ class MomentumBacktest():
 
         Displays:
         - Cumulative buy-and-hold returns
-        - Cumulative momentum strategy returns
-        - Maximum cumulative strategy returns (for drawdown visualization)
+        - Cumulative strategy returns
+        - Maximum strategy cumulative returns (for drawdown visualization)
         """
         results = self.results.copy()
         if self.results is None:
@@ -134,7 +144,7 @@ class MomentumBacktest():
 if __name__ == '__main__':
     start_backtest = '2020-01-01'
     end_backtest = '2025-05-01'
-    mom_strat = MomentumBacktest('BTC-USD', start=start_backtest, end=end_backtest, lookback=7)
-    mom_strat.plot_asset()
-    mom_strat.run_strategy()
-    mom_strat.plot_results()
+    sma_strat = SMAbacktest('BTC-USD', start=start_backtest, end=end_backtest, sma1=12, sma2=24)
+    sma_strat.plot_asset()
+    sma_strat.run_strategy()
+    sma_strat.plot_results()

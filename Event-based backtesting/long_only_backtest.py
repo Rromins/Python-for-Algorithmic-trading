@@ -45,7 +45,7 @@ class LongOnlyBacktest(BacktestBase):
         Historical price data with log returns.
     """
     def run_mean_reversion_strategy(self, sma, threshold):
-        '''
+        """
         Run a mean reversion backtest with long-only positions.
 
         The trading signal is based on the deviation of the close price
@@ -64,7 +64,7 @@ class LongOnlyBacktest(BacktestBase):
             Threshold value for the normalized difference to trigger
             trading signals. Higher values make the strategy more
             conservative.
-        '''
+        """
         msg  = "\n\nRunning mean reversion strategy | "
         msg += f"Length SMA={sma} & thr={threshold}"
         msg += f"\nfixed costs {self.ftc} | "

@@ -1,5 +1,5 @@
 """
-Vectorized backtesting of a Momentum trading strategy.
+Vectorized backtesting of a Mean Reversion trading strategy.
 """
 
 import numpy as np
@@ -7,13 +7,14 @@ import matplotlib.pyplot as plt
 import yfinance as yf
 plt.style.use('seaborn')
 
-class MomentumBacktest():
+class MeanReversionBacktest():
     """
-    Vectorized backtesting of a Momentum trading strategy.
+    Vectorized backtesting of a Mean Reversion trading strategy.
 
     This class downloads historical price data for a given asset,
-    computes rolling momentum signals based on past returns, and 
-    evaluates a long/short momentum trading strategy.
+    computes a mean-reversion signal based on the deviation of the price 
+    from its Simple Moving Average (SMA), and evaluates the strategy’s 
+    performance against a buy-and-hold benchmark.
 
     Parameters
     ----------
@@ -23,9 +24,11 @@ class MomentumBacktest():
         Start date for historical data (format: 'YYYY-MM-DD').
     end : str
         End date for historical data (format: 'YYYY-MM-DD').
-    lookback : int
-        Number of past returns to average for computing 
-        momentum signals.
+    length_sma : int
+        Window length of the SMA used to compute the deviation signal.
+    threshold : float
+        Threshold value for normalized deviations to trigger 
+        long/short trading signals.
 
     Attributes
     ----------
@@ -38,11 +41,14 @@ class MomentumBacktest():
                  ticker: str,
                  start: str,
                  end: str,
-                 lookback: int):
+                 length_sma: int,
+                 threshold: int
+                 ):
         self.ticker = ticker
         self.start = start
         self.end = end
-        self.lookback = lookback
+        self.length_sma = length_sma
+        self.threshold = threshold
         self._get_data()
         self.results = None
 
@@ -72,11 +78,14 @@ class MomentumBacktest():
 
     def run_strategy(self):
         """
-        Run the momentum trading strategy.
+        Run the mean reversion trading strategy.
 
-        A long position is taken when the rolling average of past returns
-        (over `lookback` days) is positive, and a short position when it is negative. 
-        The strategy is evaluated against a buy-and-hold benchmark.
+        A trading signal is generated based on the normalized deviation
+        of the price from its SMA:
+        
+        - Long position: when normalized difference < `-threshold`
+        - Short position: when normalized difference > `threshold`
+        - Exit position: when the normalized difference crosses zero
 
         Returns
         -------
@@ -84,14 +93,20 @@ class MomentumBacktest():
             returns : float
                 Total buy-and-hold return.
             strategy_returns : float
-                Total momentum strategy return.
+                Total mean reversion strategy return.
             max_drawdown : float
                 Maximum drawdown of the strategy.
             max_drawdown_period : datetime.timedelta
                 Longest continuous drawdown period.
         """
         df = self.data.copy()
-        df['position'] = np.sign(df['log_returns'].rolling(self.lookback).mean())
+        df['sma'] = df['close'].rolling(self.length_sma).mean()
+        df['difference'] = df['close'] - df['sma']
+        df['norm_diff'] = (df['difference'] - df['difference'].mean()) / df['difference'].std()
+        df['position'] = np.where(df['norm_diff'] > self.threshold, -1, np.nan)
+        df['position'] = np.where(df['norm_diff'] < -self.threshold, 1, df['position'])
+        df['position'] = np.where(df['norm_diff'] * df['norm_diff'].shift(1) < 0, 0, df['position'])
+        df['position'] = df['position'].ffill().fillna(0)
         df['strategy'] = df['position'].shift(1)*df['log_returns']
         df['sum_returns'] = df['log_returns'].cumsum().apply(np.exp)
         df['sum_strategy'] = df['strategy'].cumsum().apply(np.exp)
@@ -118,7 +133,7 @@ class MomentumBacktest():
 
         Displays:
         - Cumulative buy-and-hold returns
-        - Cumulative momentum strategy returns
+        - Cumulative mean reversion strategy returns
         - Maximum cumulative strategy returns (for drawdown visualization)
         """
         results = self.results.copy()
@@ -134,7 +149,7 @@ class MomentumBacktest():
 if __name__ == '__main__':
     start_backtest = '2020-01-01'
     end_backtest = '2025-05-01'
-    mom_strat = MomentumBacktest('BTC-USD', start=start_backtest, end=end_backtest, lookback=7)
-    mom_strat.plot_asset()
-    mom_strat.run_strategy()
-    mom_strat.plot_results()
+    mr_strat = MeanReversionBacktest('BTC-USD', start=start_backtest, end=end_backtest, length_sma=24, threshold=2)
+    mr_strat.plot_asset()
+    mr_strat.run_strategy()
+    mr_strat.plot_results()
